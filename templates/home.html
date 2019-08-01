@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>IoT Project</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" href="/static/css/normalize.css">
+    <link rel="stylesheet" href="/static/css/skeleton.css">
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+      <script>
+      $( function() {
+        var dateFormat = "mm/dd/yy",
+          from = $( "#from" )
+            .datepicker({
+              defaultDate: "+1w",
+              changeMonth: true,
+              numberOfMonths: 3
+            })
+            .on( "change", function() {
+              to.datepicker( "option", "minDate", getDate( this ) );
+            }),
+          to = $( "#to" ).datepicker({
+            defaultDate: "+1w",
+            changeMonth: true,
+            numberOfMonths: 3
+          })
+          .on( "change", function() {
+            from.datepicker( "option", "maxDate", getDate( this ) );
+          });
+     
+        function getDate( element ) {
+          var date;
+          try {
+            date = $.datepicker.parseDate( dateFormat, element.value );
+          } catch( error ) {
+            date = null;
+          }
+     
+          return date;
+        }
+      } );
+      </script>
+   
+  </head>
+  <body>
+    <div class="container">
+        <!-- Datetimepicker form start -->
+      <div class="row">
+        <form id="datetime_range" action="/search" method="GET"> 
+            <div class="three columns">
+              <label for="from">From date</label>
+              <input class="u-full-width" id="from" type="text" value="{{from_date}}" name="from">
+            </div>        
+            <div class="three columns">
+              <label for="to">To date</label>           
+              <input class="u-full-width" id="to" type="text" value="{{to_date}}" name="to">
+            </div>           
+            <div class="two columns">           
+              <input class="button-primary" type="submit" value="Submit" style="position:relative; top: 28px" id="submit_button" />
+            </div>        
+        </form> 
+      </div>
+    <!-- Datetimepicker form end -->
+      <div class="row">
+        <div class="one-third column" style="margin-top: 5%">
+          <strong>Showing all records</strong>                
+          <h2>Temperatures</h2>                    
+            <table class="u-full-width">
+              <thead>
+                <tr>
+                  <th>Year</th>
+                  <th>Month</th>
+		  <th>Day</th>
+		  <th>&deg;C</th>		  
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in temp %}
+                <tr>
+                  <td>{{row[0]}}</td>
+		  <td>{{row[1]}}</td>
+		  <th>{{row[2]}}</th>
+                  <td>{{row[3]}}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>  
+            <h2>Humidities</h2>
+            <table class="u-full-width">
+              <thead>
+                <tr>
+                  <th>Year</th>
+		  <th>Month</th>
+		  <th>Day</th>
+                  <th>%</th>                        
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in hum %}
+                <tr>
+                  <td>{{row[0]}}</td>
+		  <td>{{row[1]}}</td>
+		  <th>{{row[2]}}</th>
+                  <td>{{row[3]}}</td>
+                </tr>
+                </tr>          
+                {% endfor %}
+              </tbody>
+            </table>  
+            <h2>Predictions</h2>
+            <table class="u-full-width">
+              <thead>
+                <tr>
+                  <th>Year</th>
+		  <th>Month</th>
+		  <th>Day</th>
+		  <th>&deg;C</th>
+                  <th>%</th>                        
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in pred %}
+                <tr>
+                  <td>{{row[0]}}</td>
+		  <td>{{row[1]}}</th>
+		  <td>{{row[2]}}</th>
+		  <td>{{row[3]}}</td>
+		  <td>{{row[4]}}</td>
+                </tr>          
+                {% endfor %}
+              </tbody>
+            </table>                                                 
+        </div>
+
+	<!-- Google Charts Code start -->
+	      <div class="two-thirds column" style="margin-top: 5%">
+		              <div class="row">                  
+				   <div class="row">
+					<div class="three columns">				    
+			                <div id="chart_temps"></div>
+		                        <div id="chart_humid"></div>
+					<div id="chart_predTemp"></div>
+					<div id="chart_predHum"></div>
+			               </div>
+				    </div>
+                                </div>     
+               </div>
+	<!-- Google Charts Code end -->
+
+    </div>           
+  </body>
+
+	<!-- Google Charts JS start -->
+	  <script type="text/javascript" src="https://www.google.com/jsapi?autoload={'modules':[{'name':'visualization','version':'1','packages':['corechart']}]}"></script>
+
+	    <script>
+	   	 google.load('visualization', '1', {packages: ['corechart']});
+       		 google.setOnLoadCallback(drawChart);
+
+	    function drawChart() {
+
+		 var data = new google.visualization.DataTable();
+		 data.addColumn('datetime', 'Tim');  
+		 data.addColumn('number', 'Temperature');      
+		 data.addRows([
+				 {% for row in temp %} 
+					[new Date({{row[0]}},{{row[1]-1}},{{row[2]}}),
+										       {{'%0.2f'|format(row[3])}}],
+			 	 {% endfor %}
+			 ]);
+
+		 var options = {
+			 width: 600,
+			height: 200,
+			hAxis: {
+				title: "Date",
+				gridlines: { count: {{temp_items}}, color: '#CCC' },
+				format: 'dd-MMM-yyyy' },
+			vAxis: {
+				title: 'Degrees'
+				   },
+			 title: 'Temperature',
+			curveType: 'function'  //Makes line curved
+														        };
+
+			 var chart = new google.visualization.LineChart(document.getElementById('chart_temps'));
+
+			chart.draw(data, options);
+
+		 }
+ 	    </script>
+
+         <script>
+	   	 google.load('visualization', '1', {packages: ['corechart']});
+       		 google.setOnLoadCallback(drawChart);
+
+	    function drawChart() {
+
+		 var data = new google.visualization.DataTable();
+		 data.addColumn('datetime', 'Time');  
+		 data.addColumn('number', 'Humidity');      
+		 data.addRows([
+				 {% for row in hum %} 
+					[new Date({{row[0]}},{{row[1]-1}},{{row[2]}}),
+										       {{'%0.2f'|format(row[3])}}],
+			 	 {% endfor %}
+			 ]);
+
+		 var options = {
+			 width: 600,
+			height: 200,
+			hAxis: {
+				title: "Date",
+				gridlines: { count: {{temp_items}}, color: '#CCC' },
+				format: 'dd-MMM-yyyy' },
+			vAxis: {
+				title: 'Percent'
+				   },
+			 title: 'Humidity',
+			curveType: 'function'  //Makes line curved
+														        };
+
+			 var chart = new google.visualization.LineChart(document.getElementById('chart_humid'));
+
+			chart.draw(data, options);
+
+		 }
+ 	    </script>
+    
+        <script>
+	   	 google.load('visualization', '1', {packages: ['corechart']});
+       		 google.setOnLoadCallback(drawChart);
+
+	    function drawChart() {
+
+		 var data = new google.visualization.DataTable();
+		 data.addColumn('datetime', 'Time');  
+		 data.addColumn('number', 'TempPredicted');      
+		 data.addRows([
+				 {% for row in pred %} 
+					[new Date({{row[0]}},{{row[1]-1}},{{row[2]}}),
+										       {{'%0.2f'|format(row[3])}}],
+			 	 {% endfor %}
+			 ]);
+
+		 var options = {
+			 width: 600,
+			height: 200,
+			hAxis: {
+				title: "Date",
+				gridlines: { count: {{temp_items}}, color: '#CCC' },
+				format: 'dd-MMM-yyyy' },
+			vAxis: {
+				title: 'Degrees'
+				   },
+			 title: 'Predictedtemp',
+			curveType: 'function'  //Makes line curved
+														        };
+
+			 var chart = new google.visualization.LineChart(document.getElementById('chart_predTemp'));
+
+			chart.draw(data, options);
+
+		 }
+ 	    </script>
+
+        <script>
+	   	 google.load('visualization', '1', {packages: ['corechart']});
+       		 google.setOnLoadCallback(drawChart);
+
+	    function drawChart() {
+
+		 var data = new google.visualization.DataTable();
+		 data.addColumn('datetime', 'Time');  
+		 data.addColumn('number', 'PredictedHum');      
+		 data.addRows([
+				 {% for row in pred %} 
+					[new Date({{row[0]}},{{row[1]-1}},{{row[2]}}),
+										       {{'%0.2f'|format(row[4])}}],
+			 	 {% endfor %}
+			 ]);
+
+		 var options = {
+			 width: 600,
+			height: 200,
+			hAxis: {
+				title: "Date",
+				gridlines: { count: {{temp_items}}, color: '#CCC' },
+				format: 'dd-MMM-yyyy' },
+			vAxis: {
+				title: 'Percent'
+				   },
+			 title: 'PredictedHumidity',
+			curveType: 'function'  //Makes line curved
+		 };
+
+			 var chart = new google.visualization.LineChart(document.getElementById('chart_predHum'));
+
+			chart.draw(data, options);
+
+		 }
+ 	    </script>
+	<!-- End of Google Charts Scripts -->
+
+
+
+ </html>
